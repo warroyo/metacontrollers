@@ -2,7 +2,7 @@
 
 This is an example CompositeController that propagates a specified configmap to given namespaces. 
 It uses `customize` hook to select ConfigMap for propagation. 
-Please note that we ignore `labelSelector` setting it to empty one, to select related resources just by namespace/name.
+Please note that we ignore `labelSelector` setting it to empty one, to select related resources just by namespace/name. This also allows the use of a field called `includedKeys` to be able to select specific keys from the configmap `data` to be synced into the new confimap.
 
 Also, in `CompositeControler` we set `labelSelector`
 ```yaml

@@ -45,10 +45,16 @@ spec:
                 items:
                   type: string
                 type: array
+              includedKeys:
+                description: List of keys to include from the configmap. If empty all keys are included.
+                items:
+                  type: string
+                type: array
             required:
             - sourceName
             - sourceNamespace
             - targetNamespaces
+            - includedKeys
             type: object
           status:
             properties:

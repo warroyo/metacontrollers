@@ -38,6 +38,8 @@ type ConfigMapPropagationSpec struct {
 	sourceNamespace string `json:"sourceNamespace"`
 	// List of namesppaces to which propagate configmap
 	targetNamespaces []string `json:"targetNamespaces"`
+	// List of namesppaces to which propagate configmap
+	includedKeys []string `json:"includedKeys"`
 }
 
 type ConfigMapPropagationStatus struct {
