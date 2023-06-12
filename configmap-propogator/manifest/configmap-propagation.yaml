@@ -1,0 +1,63 @@
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: configmap-propagation-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: configmappropagations
+    labelSelector:
+      matchLabels:
+        version: v1
+  childResources:
+  - apiVersion: v1
+    resource: configmaps
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://configmap-propagation-controller.metacontroller/sync
+    customize:
+      webhook:
+        url: http://configmap-propagation-controller.metacontroller/customize
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmap-propagation-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configmap-propagation-controller
+  template:
+    metadata:
+      labels:
+        app: configmap-propagation-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:3.9
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: configmap-propagation-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configmap-propagation-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: configmap-propagation-controller
+  ports:
+  - port: 80
