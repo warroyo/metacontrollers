@@ -6,7 +6,7 @@ metadata:
 spec:
   generateSelector: true
   parentResource:
-    apiVersion: examples.metacontroller.io/v1alpha1
+    apiVersion: tanzu.metacontroller.io/v1alpha1
     resource: configmappropagations
     labelSelector:
       matchLabels:
