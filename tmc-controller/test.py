@@ -66,11 +66,10 @@ class Controller(BaseHTTPRequestHandler):
     def create_ns(self,object):
         cluster = object['spec']['fullName']['clusterName']
         ns = object['spec']['fullName']['name']
+        namespace_object = {"namespace": object['spec']}
         #check if ns exists
         try:
-            logging.debug(self.access_token)
             response = requests.get('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token})
-            logging.debug
             response.raise_for_status()
         except Exception as e:
             logging.error(e)
@@ -78,16 +77,33 @@ class Controller(BaseHTTPRequestHandler):
         
         namespaces = response.json()['namespaces']
         if not namespaces or not any(d['fullName']['name'] == ns for d in namespaces):
-            #create it
-            logging.debug("create it")
-        else:
-            #update it
-            logging.debug("update it")
- 
-    # @refreshToken
-    # def delete_ns(self):
-    #     #delete ns
+            try:
+                response = requests.post('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
+                response.raise_for_status()
+            except Exception as e:
+                logging.error(e)
+                return
 
+        else:
+            try:
+                response = requests.put('https://%s/v1alpha1/clusters/%s/namespaces/%s' % (self.tmc_host, cluster,ns),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
+                response.raise_for_status()
+            except Exception as e:
+                logging.error(e)
+                return
+ 
+    @refreshToken
+    def delete_ns(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
+        mgmt = object['spec']['fullName']['managementClusterName']
+        prov = object['spec']['fullName']['provisionerName']
+        try:
+            response = requests.delete('https://%s/v1alpha1/clusters/%s/namespaces/%s?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,ns,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
+            response.raise_for_status()
+        except Exception as e:
+            logging.error(e)
+            return 
 
     def do_POST(self):
         if self.path == '/sync':
@@ -101,7 +117,14 @@ class Controller(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(response).encode('utf-8'))
         elif self.path == '/finalize':
-            print("finalize")
+            observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
+            self.delete_ns(observed['parent'])
+            response: dict = {
+            }
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
         else:
             self.send_response(404)
             self.send_header('Content-type', 'application/json')
