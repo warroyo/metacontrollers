@@ -1,0 +1,15 @@
+apiVersion: tmc.tanzufield.vmware.com/v1
+kind: Namespace
+metadata:
+  name: testing-controller
+spec:
+  fullName:
+    clusterName: gke-2
+    managementClusterName: attached
+    name: testing-controller
+    provisionerName: attached
+  meta:
+    labels:
+      tenant: group-0001
+  spec:
+    workspaceName: group-0001

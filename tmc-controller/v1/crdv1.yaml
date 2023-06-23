@@ -1,0 +1,72 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: namespace.tmc.tanzufield.vmware.com
+spec:
+  group: tmc.tanzufield.vmware.com
+  scope: Namespaced
+  names:
+    plural: namespaces
+    singular: namespace
+    kind: Namespace
+    shortNames: ["ns"]
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: ConfigMapPropagation
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              sourceName:
+                description: Name of the configmap to propagate
+                type: string
+              sourceNamespace:
+                description: Namespace of the configmap to propagate
+                type: string
+              targetNamespaces:
+                description: List of namesppaces to which propagate configmap
+                items:
+                  type: string
+                type: array
+              includedKeys:
+                description: List of keys to include from the configmap. If empty all keys are included.
+                items:
+                  type: string
+                type: array
+            required:
+            - sourceName
+            - sourceNamespace
+            - targetNamespaces
+            - includedKeys
+            type: object
+          status:
+            properties:
+              actual_copies:
+                type: integer
+              expected_copies:
+                type: integer
+              observedGeneration:
+                type: integer
+            type: object
+        required:
+        - metadata
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
