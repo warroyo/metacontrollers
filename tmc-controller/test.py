@@ -64,31 +64,35 @@ class Controller(BaseHTTPRequestHandler):
     #create a new namespace
     @refreshToken
     def create_ns(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
         #check if ns exists
         try:
-            response = requests.get('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, object['cluster']))
+            logging.debug(self.access_token)
+            response = requests.get('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token})
+            logging.debug
             response.raise_for_status()
         except Exception as e:
             logging.error(e)
             return 
         
         namespaces = response.json()['namespaces']
-        if namespaces: 
-            if not any(d['fullName']['name'] == object['name'] for d in namespaces):
-                #does not exist, so create it
-            else:
-                #update if exists
-        
-
-    @refreshToken
-    def delete_ns(self):
-        #delete ns
+        if not namespaces or not any(d['fullName']['name'] == ns for d in namespaces):
+            #create it
+            logging.debug("create it")
+        else:
+            #update it
+            logging.debug("update it")
+ 
+    # @refreshToken
+    # def delete_ns(self):
+    #     #delete ns
 
 
     def do_POST(self):
         if self.path == '/sync':
-            self.create_ns()
-
+            observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
+            self.create_ns(observed['parent'])
 
             response: dict = {
             }
