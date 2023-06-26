@@ -60,9 +60,10 @@ spec:
                   workspaceName:
                     description: workspace name
                     type: string
+                required:
+                - workspaceName
             required:
             - fullName
-            - spec.workspaceName
             type: object
           status:
             properties:
