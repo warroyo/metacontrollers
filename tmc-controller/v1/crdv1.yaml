@@ -33,6 +33,7 @@ spec:
             properties:
               fullName:
                 description: object that holds all of the name details for the namesapce
+                type: object
                 properties:
                   cluster_name:
                     description: cluster name
