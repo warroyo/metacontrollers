@@ -41,6 +41,17 @@ spec:
         volumeMounts:
         - name: hooks
           mountPath: /hooks
+        env:
+        - name: TMC_HOST
+          valueFrom:
+            secretKeyRef:
+              name: tmcinfo
+              key: TMC_HOST
+        - name: CSP_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: tmcinfo
+              key: CSP_TOKEN
       volumes:
       - name: hooks
         configMap:
