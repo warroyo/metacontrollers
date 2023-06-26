@@ -48,6 +48,7 @@ spec:
                     description: provisioner name
                     type: string
               meta:
+                type: object
                 properties:
                   labels:
                     type: object
