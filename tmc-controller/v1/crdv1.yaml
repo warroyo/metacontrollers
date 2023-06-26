@@ -55,6 +55,7 @@ spec:
                     additionalProperties:
                       type: string
               spec:
+                type: object
                 properties:
                   workspaceName:
                     description: workspace name
