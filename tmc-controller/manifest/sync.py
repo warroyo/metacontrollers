@@ -1,104 +1,180 @@
 #!/usr/bin/env python
 
-# Copyright 2017 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-import copy
-import re
+import logging
+import time
+import requests
+import datetime
+import os
 
-def is_job_finished(job):
-  for condition in job.get('status', {}).get('conditions', []):
-    if (condition['type'] == 'Complete' or condition['type'] == 'Failed') and condition['status'] == 'True':
-      return True
-  return False
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
 
-def get_index(base_name, name):
-  m = re.match(r'^(.*)-(\d+)$', name)
-  if m and m.group(1) == base_name:
-    return int(m.group(2))
-  return -1
-
-def new_pod(job, index):
-  pod = copy.deepcopy(job['spec']['template'])
-  pod['apiVersion'] = 'v1'
-  pod['kind'] = 'Pod'
-  pod['metadata'] = pod.get('metadata', {})
-  pod['metadata']['name'] = '%s-%d' % (job['metadata']['name'], index)
-
-  # Add env var to every container.
-  for container in pod['spec']['containers']:
-    env = container.get('env', [])
-    env.append({'name': 'JOB_INDEX', 'value': str(index)})
-    container['env'] = env
-
-  return pod
+ #get access token from CSP token
+def getAccessToken(csp_host,csp_token):
+    try:
+        response = requests.post('https://%s/csp/gateway/am/api/auth/api-tokens/authorize?refresh_token=%s' % (csp_host,csp_token))
+        response.raise_for_status()
+    except Exception as e:
+        logging.error(e)
+        return None
+    else:
+        access_token = response.json()['access_token']
+        expires_in = response.json()['expires_in']
+        expire_time = time.time() + expires_in
+        return access_token, expire_time
 
 class Controller(BaseHTTPRequestHandler):
-  def sync(self, job, children):
-    # Arrange observed Pods by index, and count by phase.
-    observed_pods = {}
-    (active, succeeded, failed) = (0, 0, 0)
-    for pod_name, pod in children['Pod.v1'].iteritems():
-      pod_index = get_index(job['metadata']['name'], pod_name)
-      if pod_index >= 0:
-        phase = pod.get('status', {}).get('phase')
-        if phase == 'Succeeded':
-          succeeded += 1
-        elif phase == 'Failed':
-          failed += 1
+    csp_token = None
+    access_token = None
+    access_token_expiration = None
+    csp_host = None
+    tmc_host = os.environ["TMC_HOST"]
+
+    logging.info("getting initial token")
+    csp_token = os.environ['CSP_TOKEN']
+    csp_host = "console.cloud.vmware.com"
+    try:
+        access_token, access_token_expiration = getAccessToken(csp_host,csp_token)
+        if access_token is None:
+            raise Exception("Request for access token failed.")
+    except Exception as e:
+        logging.error(e)
+    else:
+        logging.info("access token recieved")
+        
+   
+    #decorator function for rereshing token
+    def refreshToken(decorated):
+        def wrapper(api,*args,**kwargs):
+            if time.time() > api.access_token_expiration:
+                api.access_token, api.access_token_expiration =  getAccessToken(api.csp_host,api.csp_token)
+                Controller.update_token(api.access_token,api.access_token_expiration)
+            return decorated(api,*args,**kwargs)
+
+        return wrapper
+    
+    #function to update the class levels api token so it can be re-used
+    @classmethod    
+    def update_token(cls,access_token, expire_time):
+        cls.access_token =access_token
+        cls.access_token_expiration = expire_time
+
+    @refreshToken
+    def get_ns_by_cluster(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
+        mgmt = object['spec']['fullName']['managementClusterName']
+        prov = object['spec']['fullName']['provisionerName']
+        #check if ns exists
+        response = requests.get('https://%s/v1alpha1/clusters/%s/namespaces?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
+        response.raise_for_status()
+        return response.json()
+    
+    @refreshToken
+    def get_ns_by_name(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
+        mgmt = object['spec']['fullName']['managementClusterName']
+        prov = object['spec']['fullName']['provisionerName']
+        dt = datetime.datetime.now()
+        #check if ns exists
+        response = requests.get('https://%s/v1alpha1/clusters/%s/namespaces/%s?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,ns,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
+        response.raise_for_status()
+        return response.json()
+
+    #create a new namespace
+    @refreshToken
+    def create_ns(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
+        namespace_object = {"namespace": object['spec']}
+       
+
+        response = self.get_ns_by_cluster(object)
+        if not response:
+            raise Exception("cluster namespace response is empty, this may mean the cluster does not exist.")
+        
+        namespaces = response['namespaces']
+        if not namespaces or not any(d['fullName']['name'] == ns for d in namespaces):
+            
+            response = requests.post('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
+            response.raise_for_status()
+
         else:
-          active += 1
-        observed_pods[pod_index] = pod
+            response = requests.put('https://%s/v1alpha1/clusters/%s/namespaces/%s' % (self.tmc_host, cluster,ns),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
+            response.raise_for_status()
+    
+        #for some reason calling the API too quickly after an update cuases it to no return status
+        time.sleep(2)
+        nsstatus = self.get_ns_by_name(object)
+        return  {'status': nsstatus['namespace']['status']}
+    
 
-    # If the job already finished (either completed or failed) at some point,
-    # stop actively managing Pods since they might get deleted by Pod GC.
-    # Just generate a desired state for any observed Pods and return status.
-    if is_job_finished(job):
-      return {
-        'status': job['status'],
-        'children': [new_pod(job, i) for i, pod in observed_pods.iteritems()]
-      }
+    @refreshToken
+    def delete_ns(self,object):
+        cluster = object['spec']['fullName']['clusterName']
+        ns = object['spec']['fullName']['name']
+        mgmt = object['spec']['fullName']['managementClusterName']
+        prov = object['spec']['fullName']['provisionerName']
+        response = requests.delete('https://%s/v1alpha1/clusters/%s/namespaces/%s?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,ns,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
+        response.raise_for_status()
 
-    # Compute status based on what we observed, before building desired state.
-    spec_completions = job['spec'].get('completions', 1)
-    desired_status = {'active': active, 'succeeded': succeeded, 'failed': failed}
-    desired_status['conditions'] = [{'type': 'Complete', 'status': str(succeeded == spec_completions)}]
+        return {'status': {},"finalized": True}
+        
 
-    # Generate desired state for existing Pods.
-    desired_pods = {}
-    for pod_index, pod in observed_pods.iteritems():
-      desired_pods[pod_index] = new_pod(job, pod_index)
-
-    # Create more Pods as needed.
-    spec_parallelism = job['spec'].get('parallelism', 1)
-    for pod_index in xrange(spec_completions):
-      if pod_index not in desired_pods and active < spec_parallelism:
-        desired_pods[pod_index] = new_pod(job, pod_index)
-        active += 1
-
-    return {'status': desired_status, 'children': desired_pods.values()}
-
-
-  def do_POST(self):
-    observed = json.loads(self.rfile.read(int(self.headers.getheader('content-length'))))
-    desired = self.sync(observed['parent'], observed['children'])
-
-    self.send_response(200)
-    self.send_header('Content-type', 'application/json')
-    self.end_headers()
-    self.wfile.write(json.dumps(desired))
+    def do_POST(self):
+        if self.path == '/sync':
+            dt = datetime.datetime.now()
+            observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
+            try:
+                response = self.create_ns(observed['parent'])
+            except Exception as e:
+                logging.error(e)
+                response = {'status': {"phase": "NOT_READY","conditions":{"Ready": {
+                    "type": "Ready",
+                    "status": "FALSE",
+                    "lastTransitionTime": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "reason": str(e)
+                }} }}
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        elif self.path == '/finalize':
+            observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
+            try:
+                response = self.delete_ns(observed['parent'])
+            except requests.exceptions.HTTPError as e:
+                logging.error(e)
+                if e.response.status_code != 404:
+                    response = {'status': {"phase": "NOT_READY","conditions":{"Ready": {
+                        "type": "Ready",
+                        "status": "FALSE",
+                        "lastTransitionTime": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                        "reason": str(e)
+                    }} }}
+                else:
+                    response = {'status': {},"finalized": True}
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+        else:
+            self.send_response(404)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_msg: dict = {
+                'error': '404',
+                'endpoint': self.path
+            }
+            self.wfile.write(json.dumps(error_msg).encode('utf-8'))
 
 HTTPServer(('', 80), Controller).serve_forever()
+
+
+
+
+

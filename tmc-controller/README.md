@@ -1,7 +1,11 @@
-## IndexedJob
+## TMC Controller
 
-This is an example CompositeController that's similar to Job,
-except that each Pod gets assigned a unique index, similar to StatefulSet.
+This is a controller that handles managing TMC resources.
+
+
+### Current APIs Supported
+
+* Namespaces -  full LCM of TMC managed namespaces
 
 ### Prerequisites
 
@@ -14,19 +18,8 @@ kubectl apply -k v1
 ```
 (or pass `v1beta1` for kubernetes 1.15 or older)
 
-### Create an IndexedJob
+### Create an TMC namespace
 
 ```sh
-kubectl apply -f my-indexedjob.yaml
+kubectl apply -f example-ns.yaml
 ```
-
-Each Pod created should print its index:
-
-```console
-$ kubectl logs print-index-2
-2
-```
-
-### Failure Policy
-
-Implementing `activeDeadlineSeconds` and `backoffLimit` is left as an exercise for the reader.

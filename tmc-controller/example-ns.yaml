@@ -2,6 +2,8 @@ apiVersion: tmc.tanzufield.vmware.com/v1
 kind: Namespace
 metadata:
   name: testing-controller
+  labels:
+    version: v1
 spec:
   fullName:
     clusterName: gke-2

@@ -2,38 +2,41 @@
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
 metadata:
-  name: indexedjob-controller
+  name: tmc-controller
 spec:
   generateSelector: true
   parentResource:
     apiVersion: tmc.tanzufield.vmware.com/v1
     resource: namespaces
-  childResources:
-    - apiVersion: v1
-      resource: pods
+    labelSelector:
+      matchLabels:
+        version: v1
   hooks:
     sync:
       webhook:
-        url: http://indexedjob-controller.metacontroller/sync
+        url: http://tmc-controller.metacontroller/sync
+    finalize:
+      webhook:
+        url: http://tmc-controller.metacontroller/finalize
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: indexedjob-controller
+  name: tmc-controller
   namespace: metacontroller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: indexedjob-controller
+      app: tmc-controller
   template:
     metadata:
       labels:
-        app: indexedjob-controller
+        app: tmc-controller
     spec:
       containers:
       - name: controller
-        image: python:2.7
+        image: python:3.9
         command: ["python", "/hooks/sync.py"]
         volumeMounts:
         - name: hooks
@@ -41,15 +44,15 @@ spec:
       volumes:
       - name: hooks
         configMap:
-          name: indexedjob-controller
+          name: tmc-controller
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: indexedjob-controller
+  name: tmc-controller
   namespace: metacontroller
 spec:
   selector:
-    app: indexedjob-controller
+    app: tmc-controller
   ports:
   - port: 80
