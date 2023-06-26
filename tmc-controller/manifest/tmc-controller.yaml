@@ -37,7 +37,8 @@ spec:
       containers:
       - name: controller
         image: python:3.9
-        command: ["python", "/hooks/sync.py"]
+        command: ["/bin/sh","-c"]
+        args: ["pip install requests; python /hooks/sync.py"]
         volumeMounts:
         - name: hooks
           mountPath: /hooks
