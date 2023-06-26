@@ -1,5 +1,5 @@
 apiVersion: tmc.tanzufield.vmware.com/v1
-kind: Namespace
+kind: TMCNamespace
 metadata:
   name: testing-controller
   labels:
