@@ -7,7 +7,7 @@ spec:
   generateSelector: true
   parentResource:
     apiVersion: tmc.tanzufield.vmware.com/v1
-    resource: namespaces
+    resource: tmcnamespaces
     labelSelector:
       matchLabels:
         version: v1
