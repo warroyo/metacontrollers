@@ -98,18 +98,23 @@ class Controller(BaseHTTPRequestHandler):
         
         namespaces = response['namespaces']
         if not namespaces or not any(d['fullName']['name'] == ns for d in namespaces):
-            
+            logging.info("namespace does not exist creating "+ ns)
             response = requests.post('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
             response.raise_for_status()
 
         else:
+            logging.info("namespace exists updating "+ ns)
             response = requests.put('https://%s/v1alpha1/clusters/%s/namespaces/%s' % (self.tmc_host, cluster,ns),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
             response.raise_for_status()
     
-        #for some reason calling the API too quickly after an update cuases it to no return status
-        time.sleep(2)
-        nsstatus = self.get_ns_by_name(object)
-        return  {'status': nsstatus['namespace']['status']}
+        #for some reason calling the API too quickly after an update cuases it to no return status so we retry
+        status_field = {}
+        while not status_field:
+          logging.info("getting current namespace status") 
+          nsstatus = self.get_ns_by_name(object)
+          status_field =  nsstatus['namespace']['status']
+          time.sleep(2)
+        return  {'status': status_field}
     
 
     @refreshToken
