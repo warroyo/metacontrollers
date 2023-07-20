@@ -92,7 +92,7 @@ class Controller(BaseHTTPRequestHandler):
         namespace_object = {"namespace": object['spec']}
        
 
-        # response = self.get_ns_by_cluster(object)
+        response = self.get_ns_by_cluster(object)
         # if not response:
         #     raise Exception("cluster namespace response is empty, this may mean the cluster does not exist.")
         
