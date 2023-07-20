@@ -96,8 +96,8 @@ class Controller(BaseHTTPRequestHandler):
         # if not response:
         #     raise Exception("cluster namespace response is empty, this may mean the cluster does not exist.")
         
-        namespaces = response['namespaces']
-        if not namespaces or not any(d['fullName']['name'] == ns for d in namespaces):
+   
+        if not "namespaces" in response or not any(d['fullName']['name'] == ns for d in response['namespaces']):
             logging.info("namespace does not exist creating "+ ns)
             response = requests.post('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
             response.raise_for_status()
