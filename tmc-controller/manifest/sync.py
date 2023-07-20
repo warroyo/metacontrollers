@@ -8,7 +8,7 @@ import requests
 import datetime
 import os
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
  #get access token from CSP token
