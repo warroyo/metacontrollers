@@ -1,0 +1,8 @@
+resources:
+- sa-per-ns.yaml
+configMapGenerator:
+- name: sa-per-ns-hooks
+  namespace: metacontroller
+  files:
+  - finalize.jsonnet
+  - sync.jsonnet
