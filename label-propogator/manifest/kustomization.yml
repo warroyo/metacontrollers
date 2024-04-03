@@ -1,0 +1,7 @@
+resources:
+- label-propogator.yaml
+configMapGenerator:
+- name: label-propogator-hooks
+  namespace: metacontroller
+  files:
+  - sync.py

@@ -1,0 +1,54 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: label-propogator
+spec:
+  resources:
+  - apiVersion: v1
+    resource: pods
+  hooks:
+    sync:
+      webhook:
+        url: http://label-propogator.metacontroller/sync
+    customize:
+      webhook:
+        url: http://label-propogator/customize
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: label-propogator
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: label-propogator
+  template:
+    metadata:
+      labels:
+        app: label-propogator
+    spec:
+      containers:
+      - name: controller
+        image: python:3.9
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: label-propogator-hooks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: label-propogator
+  namespace: metacontroller
+spec:
+  selector:
+    app: label-propogator
+  ports:
+  - port: 80

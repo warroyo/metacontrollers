@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    propogate-labels: "true"
+  labels:
+    label1: should-propogate
+    label2: should-propogate2
+  name: test-label-ns
