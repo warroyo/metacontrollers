@@ -19,7 +19,7 @@ all of the code that makes this work are in the following files in the `manifest
 
 ### Prerequisites
 
-* Install [Metacontroller](https://metacontroller.github.io/metacontroller/guide/helm-install.html). For this controller specifically you will need to install `v4.10.2`. The reasonf or this is that there is a bug in the newer versions that prevents the namespace from being used as a related resource. Once this is fixed this repo will be updated. 
+* Install [Metacontroller](https://metacontroller.github.io/metacontroller/guide/helm-install.html). *** For this controller specifically you will need to install `v4.10.2`. The reason for this is that there is a bug in the newer versions that prevents the namespace from being used as a related resource. Once this is fixed this repo will be updated. *** 
 
 ### Deploy the DecoratorControllers
 
