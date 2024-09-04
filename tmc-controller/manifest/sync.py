@@ -109,10 +109,14 @@ class Controller(BaseHTTPRequestHandler):
     
         #for some reason calling the API too quickly after an update cuases it to no return status so we retry
         status_field = {}
-        while not status_field:
+        timeout = time.time() + 10   # 30s from now
+        while not status_field: 
           logging.info("getting current namespace status") 
           nsstatus = self.get_ns_by_name(object)
           status_field =  nsstatus['namespace']['status']
+          if time.time() > timeout
+            logging.info("timeout reached for NS status")
+            break
           time.sleep(2)
         return  {'status': status_field}
     
