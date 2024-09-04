@@ -114,7 +114,7 @@ class Controller(BaseHTTPRequestHandler):
           logging.info("getting current namespace status") 
           nsstatus = self.get_ns_by_name(object)
           status_field =  nsstatus['namespace']['status']
-          if time.time() > timeout
+          if time.time() > timeout:
             logging.info("timeout reached for NS status")
             break
           time.sleep(2)
