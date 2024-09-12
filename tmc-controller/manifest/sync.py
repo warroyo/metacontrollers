@@ -34,7 +34,7 @@ class Controller(BaseHTTPRequestHandler):
 
     logging.info("getting initial token")
     csp_token = os.environ['CSP_TOKEN']
-    csp_host = "console.cloud.vmware.com"
+    csp_host = "console.tanzu.broadcom.com"
     try:
         access_token, access_token_expiration = getAccessToken(csp_host,csp_token)
         if access_token is None:
