@@ -11,6 +11,7 @@ spec:
     labelSelector:
       matchLabels:
         version: v1
+  resyncPeriodSeconds: 120
   hooks:
     sync:
       webhook:
@@ -53,6 +54,11 @@ spec:
             secretKeyRef:
               name: tmcinfo
               key: CSP_TOKEN
+        - name: DRY_RUN
+          valueFrom:
+            secretKeyRef:
+              name: tmcinfo
+              key: DRY_RUN
       volumes:
       - name: hooks
         configMap:

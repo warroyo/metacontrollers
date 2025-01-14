@@ -31,6 +31,14 @@ class Controller(BaseHTTPRequestHandler):
     access_token_expiration = None
     csp_host = None
     tmc_host = os.environ["TMC_HOST"]
+    dry_run = os.getenv("DRY_RUN", "false") 
+
+    if dry_run == "true":
+        logging.info("running in dry run mode. not api calls to TMC will be made")
+        dry_run = True
+    else:
+        logging.info("not running in dry-run mode")
+        dry_run =  False
 
     logging.info("getting initial token")
     csp_token = os.environ['CSP_TOKEN']
@@ -91,12 +99,11 @@ class Controller(BaseHTTPRequestHandler):
         ns = object['spec']['fullName']['name']
         namespace_object = {"namespace": object['spec']}
        
+        if self.dry_run:
+            logging.info("running in dry-run, namespace would have been created or updated: "+ ns)
+            return {'status': {}}
 
         response = self.get_ns_by_cluster(object)
-        # if not response:
-        #     raise Exception("cluster namespace response is empty, this may mean the cluster does not exist.")
-        
-   
         if not "namespaces" in response or not any(d['fullName']['name'] == ns for d in response['namespaces']):
             logging.info("namespace does not exist creating "+ ns)
             response = requests.post('https://%s/v1alpha1/clusters/%s/namespaces' % (self.tmc_host, cluster),headers={'authorization': 'Bearer '+self.access_token}, json=namespace_object)
@@ -120,15 +127,29 @@ class Controller(BaseHTTPRequestHandler):
           time.sleep(2)
         return  {'status': status_field}
     
+    def upsert_only(self,annotations,ns):
+        if "tmc-controller.upsert-only" in annotations:
+            logging.info("annotation set to upsert only for "+ ns +" not deleting upstream TMC object")
+            return True
+        else:
+            return False
 
     @refreshToken
     def delete_ns(self,object):
-        cluster = object['spec']['fullName']['clusterName']
         ns = object['spec']['fullName']['name']
+        upsert = self.upsert_only(object['metadata']['annotations'],ns)
+        cluster = object['spec']['fullName']['clusterName']
         mgmt = object['spec']['fullName']['managementClusterName']
         prov = object['spec']['fullName']['provisionerName']
-        response = requests.delete('https://%s/v1alpha1/clusters/%s/namespaces/%s?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,ns,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
-        response.raise_for_status()
+        
+       
+        if self.dry_run:
+            logging.info("running in dry-run, namespace would have been deleted: "+ ns)
+        elif upsert:
+            logging.info("annotation preventing delete of upstream TMC namespace: "+ ns)
+        else:
+            response = requests.delete('https://%s/v1alpha1/clusters/%s/namespaces/%s?fullName.managementClusterName=%s&fullName.provisionerName=%s' % (self.tmc_host, cluster,ns,mgmt,prov),headers={'authorization': 'Bearer '+self.access_token})
+            response.raise_for_status()
 
         return {'status': {},"finalized": True}
         
