@@ -16,6 +16,7 @@ spec:
     sync:
       webhook:
         url: http://tmc-controller.metacontroller/sync
+        timeout: 30s
     finalize:
       webhook:
         url: http://tmc-controller.metacontroller/finalize
@@ -59,6 +60,7 @@ spec:
             secretKeyRef:
               name: tmcinfo
               key: DRY_RUN
+              optional: true
       volumes:
       - name: hooks
         configMap:
