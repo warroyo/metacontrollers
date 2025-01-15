@@ -3,7 +3,7 @@ kind: TMCNamespace
 metadata:
   name: testing-controller
   annotations:
-    # tmc-controller.upsert-only: "true"
+    tmc-controller.upsert-only: "true"
   labels:
     version: v1
 spec:

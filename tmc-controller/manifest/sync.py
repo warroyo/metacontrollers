@@ -127,17 +127,20 @@ class Controller(BaseHTTPRequestHandler):
           time.sleep(2)
         return  {'status': status_field}
     
-    def upsert_only(self,annotations,ns):
-        if "tmc-controller.upsert-only" in annotations:
-            logging.info("annotation set to upsert only for "+ ns +" not deleting upstream TMC object")
-            return True
+    def upsert_only(self,metadata,ns):
+        if "annotations" in metadata:
+            if "tmc-controller.upsert-only" in metadata["annotations"]:
+                logging.info("annotation set to upsert only for "+ ns +" not deleting upstream TMC object")
+                return True
+            else:
+                return False
         else:
             return False
 
     @refreshToken
     def delete_ns(self,object):
         ns = object['spec']['fullName']['name']
-        upsert = self.upsert_only(object['metadata']['annotations'],ns)
+        upsert = self.upsert_only(object['metadata'],ns)
         cluster = object['spec']['fullName']['clusterName']
         mgmt = object['spec']['fullName']['managementClusterName']
         prov = object['spec']['fullName']['provisionerName']
