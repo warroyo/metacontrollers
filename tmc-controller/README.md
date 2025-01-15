@@ -17,8 +17,7 @@ Deploy the secret that containes the TMC api token, this is retrieved from the C
 ```sh
 export CSP_TOKEN='<csp token here>'
 export TMC_HOST='yourtmchost.com'
-export DRY_RUN='true or false' # this will prevent any TMC call from being made
-kubectl create secret generic tmcinfo -n metacontroller --from-literal=CSP_TOKEN=$CSP_TOKEN --from-literal=TMC_HOST=$TMC_HOST --from-literal=DRY_RUN=$DRY_RUN
+kubectl create secret generic tmcinfo -n metacontroller --from-literal=CSP_TOKEN=$CSP_TOKEN --from-literal=TMC_HOST=$TMC_HOST
 ```
 
 ```sh
