@@ -11,15 +11,16 @@ spec:
     labelSelector:
       matchLabels:
         version: v1
-  resyncPeriodSeconds: 120
+  resyncPeriodSeconds: 300
   hooks:
     sync:
       webhook:
         url: http://tmc-controller.metacontroller/sync
-        timeout: 30s
+        timeout: 60s
     finalize:
       webhook:
         url: http://tmc-controller.metacontroller/finalize
+        timeout: 60s
 ---
 apiVersion: apps/v1
 kind: Deployment
